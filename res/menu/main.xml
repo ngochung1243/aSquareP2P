@@ -1,0 +1,18 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.example.demo_wifip2p.MainActivity" >
+
+    <item 
+        android:id="@+id/mItem_Browser"
+        android:showAsAction="always"
+        android:title="Browser"
+        android:icon="@drawable/ic_search_white_24dp"
+        />
+    
+    <item
+        android:id="@+id/action_settings"
+        android:orderInCategory="100"
+        android:showAsAction="never"
+        android:title="@string/action_settings"/>
+
+</menu>
