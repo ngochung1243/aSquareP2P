@@ -8,6 +8,8 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
+import com.example.demo_wifip2p.MainActivity.State;
+import com.example.demo_wifip2p.P2PHandleNetwork.P2PHandleNetworkListener;
 import com.example.demo_wifip2p.ReceiveSocketAsync.SocketReceiverDataListener;
 import com.example.demo_wifip2p.ServerSendSocket_Thread.ServerSocketListener;
 
@@ -32,20 +34,21 @@ import android.provider.MediaStore;
 import android.util.Log;
 import android.widget.Toast;
 
-public class WifiP2PBroardcast extends BroadcastReceiver implements PeerListListener{
+public class WifiP2PBroardcast extends BroadcastReceiver implements PeerListListener, P2PHandleNetworkListener{
 	
 	WifiP2pManager mManager;
 	Channel mChannel;
 	Context mContext;
-	public WifiP2PBrooadcastListener mListener = null;
+	public WifiP2PBroadcastListener mListener = null;
 	P2PHandleNetwork mP2PHandle;
-	
 	
 	public WifiP2PBroardcast(WifiP2pManager manager, Channel channel, MainActivity activity){
 		mManager = manager;
 		mChannel = channel;
 		mContext = activity;
+		
 		mP2PHandle = new P2PHandleNetwork(mContext);
+		mP2PHandle.mListener = this;
 	}
 	
 	@Override
@@ -67,10 +70,16 @@ public class WifiP2PBroardcast extends BroadcastReceiver implements PeerListList
         } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
             // Respond to new connection or disconnections
         	NetworkInfo networkInfo = (NetworkInfo)intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
-        	
-        	if (networkInfo.isConnected())
-        		Toast.makeText(mContext.getApplicationContext(), "Connection change", Toast.LENGTH_SHORT).show();
-        		mManager.requestConnectionInfo(mChannel, (ConnectionInfoListener)mP2PHandle);
+        	Toast.makeText(mContext.getApplicationContext(), "Connection change", Toast.LENGTH_SHORT).show();
+        	if (networkInfo.isConnected()){
+        		
+            	if (MainActivity.mState == State.StateDefault){
+            		MainActivity.mState = State.StatePassive;
+            	}
+            	
+            	
+        		mManager.requestConnectionInfo(mChannel, (ConnectionInfoListener)mP2PHandle); 		
+        	}
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
             // Respond to this device's wifi state changing
         	Toast.makeText(mContext.getApplicationContext(), "Device change", Toast.LENGTH_SHORT).show();
@@ -99,8 +108,48 @@ public class WifiP2PBroardcast extends BroadcastReceiver implements PeerListList
 		mP2PHandle.send(is);
 	}
 	
-	public interface WifiP2PBrooadcastListener{
+	public void disconnect(){
+		mP2PHandle.disconnect();
+		mManager.removeGroup(mChannel, new ActionListener() {
+			
+			@Override
+			public void onSuccess() {
+				// TODO Auto-generated method stub
+				mManager.cancelConnect(mChannel, new ActionListener() {
+					
+					@Override
+					public void onSuccess() {
+						// TODO Auto-generated method stub
+						
+					}
+					
+					@Override
+					public void onFailure(int reason) {
+						// TODO Auto-generated method stub
+						
+					}
+				});
+			}
+			
+			@Override
+			public void onFailure(int reason) {
+				// TODO Auto-generated method stub
+				
+			}
+		});
+	}
+	
+	public interface WifiP2PBroadcastListener{
 		public void onPeers(WifiP2pDeviceList peers);
+		public void onConnection();
+	}
+
+	@Override
+	public void onConnectComplete() {
+		// TODO Auto-generated method stub
+		if (mListener != null){
+			mListener.onConnection();
+		} 
 	}
 }
 

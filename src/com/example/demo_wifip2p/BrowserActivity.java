@@ -10,7 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.example.demo_wifip2p.WifiP2PBroardcast.WifiP2PBrooadcastListener;
+import com.example.demo_wifip2p.MainActivity.State;
+import com.example.demo_wifip2p.WifiP2PBroardcast.WifiP2PBroadcastListener;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -46,7 +47,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class BrowserActivity extends Activity implements WifiP2PBrooadcastListener{
+public class BrowserActivity extends Activity implements WifiP2PBroadcastListener{
 	
 	DeviceListAdapter deviceListAdapter;
 	ListView lvDevice;
@@ -85,6 +86,7 @@ public class BrowserActivity extends Activity implements WifiP2PBrooadcastListen
 			public void onItemClick(AdapterView<?> parent, View view,
 					int position, long id) {
 				// TODO Auto-generated method stub
+				MainActivity.mState = State.StateActive;
 				connectToPeer(position);
 			}
 		});
@@ -283,7 +285,7 @@ public class BrowserActivity extends Activity implements WifiP2PBrooadcastListen
 	
 	private void connectToPeer(int position){
 		WifiP2pDevice device = mPeerList.get(position);
-		WifiP2pConfig config = new WifiP2pConfig();
+		final WifiP2pConfig config = new WifiP2pConfig();
 		config.deviceAddress = device.deviceAddress;
 		config.wps.setup = WpsInfo.PBC;
 		config.groupOwnerIntent = 0;
@@ -302,35 +304,18 @@ public class BrowserActivity extends Activity implements WifiP2PBrooadcastListen
 			}
 		});
 	}
-	
-	@Override
-	protected void onDestroy() {
-		// TODO Auto-generated method stub
-		super.onDestroy();
-		if (serviceInfo != null){
-			mManager.removeLocalService(mChannel, serviceInfo, new ActionListener() {
-				
-				@Override
-				public void onSuccess() {
-					// TODO Auto-generated method stub
-					
-				}
-				
-				@Override
-				public void onFailure(int reason) {
-					// TODO Auto-generated method stub
-					
-				}
-			});
-		}
-	}
 
 	@Override
 	public void onPeers(WifiP2pDeviceList peers) {
 		// TODO Auto-generated method stub
 		mPeerList.clear();
 		mPeerList.addAll(peers.getDeviceList());
-		boolean p = mPeerList.get(0).isServiceDiscoveryCapable();
 		deviceListAdapter.notifyDataSetChanged();
+	}
+
+	@Override
+	public void onConnection() {
+		// TODO Auto-generated method stub
+		finish();
 	}
 }

@@ -18,6 +18,7 @@ import java.util.zip.Inflater;
 
 import com.example.demo_wifip2p.ReceiveSocketAsync.SocketReceiverDataListener;
 import com.example.demo_wifip2p.ServerSendSocket_Thread.ServerSocketListener;
+import com.example.demo_wifip2p.WifiP2PBroardcast.WifiP2PBroadcastListener;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
@@ -54,6 +55,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.View.OnClickListener;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -64,7 +67,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
-public class MainActivity extends Activity implements SocketReceiverDataListener, ServerSocketListener{
+public class MainActivity extends Activity implements SocketReceiverDataListener, WifiP2PBroadcastListener{
+	
+	public static enum State{
+		StateDefault,
+		StateActive,
+		StatePassive
+	}
 
 	Context mContext;
 	
@@ -78,7 +87,8 @@ public class MainActivity extends Activity implements SocketReceiverDataListener
 	List<String> image_urls = new ArrayList<String>();
 	
 	public boolean firstDiscover = true;
-	boolean activeConnect = false;
+	ProgressDialog mProgess;
+	public static State mState;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -86,10 +96,31 @@ public class MainActivity extends Activity implements SocketReceiverDataListener
 		setContentView(R.layout.activity_main);
 		
 		mContext = this;
+		mProgess = new ProgressDialog(this){
+			@Override
+			public void onBackPressed() {
+				if (mProgess.isShowing()){
+					mProgess.dismiss();
+				}
+			};
+		};
+		
+		mState = State.StateDefault;
 		
 		lvImage = (ListView)findViewById(R.id.lvImage);
 		lvImageAdapter = new ImageListAdapter(this, R.layout.listview_item, image_urls);
 		lvImage.setAdapter(lvImageAdapter);
+		lvImage.setOnItemClickListener(new OnItemClickListener() {
+
+			@Override
+			public void onItemClick(AdapterView<?> parent, View view,
+					int position, long id) {
+				// TODO Auto-generated method stub
+				Intent imageViewIntent = new Intent(getApplicationContext(), ShowImageActivity.class);
+				imageViewIntent.putExtra("ImagePath", image_urls.get(position));
+				startActivity(imageViewIntent);
+			}
+		});
 		
 		setManager();
 	}
@@ -99,7 +130,11 @@ public class MainActivity extends Activity implements SocketReceiverDataListener
 		
 		mChannel = mManager.initialize(this, getMainLooper(), null);
 		
+		advertiseWifiP2P();
+		
 		mBroadcast = new WifiP2PBroardcast(mManager, mChannel, this);
+		
+		mBroadcast.mListener = this;
 		
 		filter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
 		filter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
@@ -108,6 +143,23 @@ public class MainActivity extends Activity implements SocketReceiverDataListener
 		filter.addAction(WifiP2pManager.WIFI_P2P_DISCOVERY_CHANGED_ACTION);
 		
 		registerReceiver(mBroadcast, filter);
+	}
+	
+	private void advertiseWifiP2P(){
+		mManager.discoverPeers(mChannel, new ActionListener() {
+			
+			@Override
+			public void onSuccess() {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void onFailure(int reason) {
+				// TODO Auto-generated method stub
+				
+			}
+		});
 	}
 	
 	public class ImageListAdapter extends ArrayAdapter<String>{
@@ -180,9 +232,33 @@ public class MainActivity extends Activity implements SocketReceiverDataListener
 
 			bm.compress(CompressFormat.PNG, 0, osBm);
 			
+			byte[] barray = osBm.toByteArray();
+			
 			ByteArrayInputStream isBm = new ByteArrayInputStream(osBm.toByteArray());
 			
+			mProgess.setTitle("Send Picture");
+			mProgess.setMessage("Wait for send...");
+			mProgess.show();
+			
 			mBroadcast.send(isBm);
+			//mBroadcast.disconnect();
+			
+			mProgess.dismiss();
+			advertiseWifiP2P();
+			
+		}else if (requestCode == 20 || resultCode == RESULT_OK){
+			
+			mBroadcast.mListener = this;
+			
+			if (mState == State.StateActive){
+				mProgess.setTitle("Receive Picture");
+				mProgess.setMessage("Wait for picture...");
+				mProgess.show();
+			}else if (mState == State.StatePassive){
+				sendImageCapture();
+			}
+			
+			mState = State.StateDefault;
 		}
 	}
 
@@ -195,9 +271,14 @@ public class MainActivity extends Activity implements SocketReceiverDataListener
 			@Override
 			public void run() {
 				// TODO Auto-generated method stub
+				if (mProgess.isShowing()){
+					mProgess.dismiss();
+				}
 				lvImageAdapter.notifyDataSetChanged();
 			}
 		});
+		mBroadcast.disconnect();
+		advertiseWifiP2P();
 	}
 	
 	@Override
@@ -213,21 +294,23 @@ public class MainActivity extends Activity implements SocketReceiverDataListener
 		// TODO Auto-generated method stub
 		if (item.getItemId() == R.id.mItem_Browser){
 			Intent intent = new Intent(this, BrowserActivity.class);
-			startActivity(intent);
+			startActivityForResult(intent, 20);
 		}
 		
 		return super.onOptionsItemSelected(item);
 	}
 
 	@Override
-	public void onReceive_SendSocket(Socket sendSocket) {
+	public void onPeers(WifiP2pDeviceList peers) {
 		// TODO Auto-generated method stub
-		Toast.makeText(this, "Co connect", Toast.LENGTH_SHORT).show();
+		
 	}
 
 	@Override
-	public void onReceive_ReceiveSocket(Socket receiveSocket) {
+	public void onConnection() {
 		// TODO Auto-generated method stub
-		
+		if (mState == State.StatePassive){
+			sendImageCapture();
+		}
 	}
 }

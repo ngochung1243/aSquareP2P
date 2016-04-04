@@ -26,25 +26,29 @@ public final class R {
         public static final int ic_search_white_24dp=0x7f020001;
     }
     public static final class id {
-        public static final int action_settings=0x7f080005;
+        public static final int action_settings=0x7f080006;
         public static final int imvIcon=0x7f080002;
+        public static final int imvReceiveImage=0x7f080004;
         public static final int lvDevice=0x7f080001;
         public static final int lvImage=0x7f080000;
-        public static final int mItem_Browser=0x7f080004;
+        public static final int mItem_Browser=0x7f080005;
         public static final int tvLabel=0x7f080003;
     }
     public static final class layout {
         public static final int activity_main=0x7f030000;
         public static final int browserpeer_activity=0x7f030001;
         public static final int listview_item=0x7f030002;
+        public static final int showimage_activity=0x7f030003;
     }
     public static final class menu {
         public static final int main=0x7f070000;
+        public static final int show_image=0x7f070001;
     }
     public static final class string {
         public static final int action_settings=0x7f050002;
         public static final int app_name=0x7f050000;
         public static final int hello_world=0x7f050001;
+        public static final int title_activity_show_image=0x7f050003;
     }
     public static final class style {
         /** 

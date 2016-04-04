@@ -1,5 +1,6 @@
 package com.example.demo_wifip2p;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -38,18 +39,24 @@ public class ReceiveSocketAsync implements Runnable{
 		try {
 			InputStream receiveInputStream = mReceiveSocket.getInputStream();
 			while (true){
-				
-				final File f = new File(Environment.getExternalStorageDirectory() + "/"
-                        + mContext.getPackageName() + "/wifip2pImageShare-" + System.currentTimeMillis()
-                        + ".jpg");
-
-                File dirs = new File(f.getParent());
-                if (!dirs.exists())
-                    dirs.mkdirs();
-                f.createNewFile();
+				ByteArrayOutputStream os = new ByteArrayOutputStream();
                 
-                FileTransferService.copyFile(receiveInputStream, new FileOutputStream(f));
-                ((SocketReceiverDataListener)mContext).onReceiveData(f.getAbsolutePath());
+                FileTransferService.copyFile(receiveInputStream, os);
+                
+                os.flush();
+                if (os.size() > 0){
+                	final File f = new File(Environment.getExternalStorageDirectory() + "/"
+                            + mContext.getPackageName() + "/wifip2pImageShare-" + System.currentTimeMillis()
+                            + ".jpg");
+
+                    File dirs = new File(f.getParent());
+                    if (!dirs.exists())
+                        dirs.mkdirs();
+                    f.createNewFile();
+                    
+                    os.writeTo(new FileOutputStream(f));
+                    ((SocketReceiverDataListener)mContext).onReceiveData(f.getAbsolutePath());
+                }
                 break;
 			}
 			

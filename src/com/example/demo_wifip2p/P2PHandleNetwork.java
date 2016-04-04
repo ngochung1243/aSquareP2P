@@ -16,7 +16,7 @@ import android.net.wifi.p2p.WifiP2pManager.ConnectionInfoListener;
 import android.net.wifi.p2p.WifiP2pManager.PeerListListener;
 import android.widget.Toast;
 
-public class P2PHandleNetwork implements ConnectionInfoListener, ServerSocketListener, PeerListListener {
+public class P2PHandleNetwork implements ConnectionInfoListener, ServerSocketListener {
 
 	private static final int SOCKET_TIMEOUT = 5000;
 	
@@ -26,25 +26,39 @@ public class P2PHandleNetwork implements ConnectionInfoListener, ServerSocketLis
 	ServerSendSocket_Thread serverSendThread;
 	Socket mSendSocket;
 	Socket mReceiveSocket;
+	public P2PHandleNetworkListener mListener;
 	
 	public P2PHandleNetwork(Context context){
 		mContext = context;
 	}
 	
-	public void send(ByteArrayInputStream is){
+	public void send(final ByteArrayInputStream is){
 		try {
-			OutputStream os = mSendSocket.getOutputStream();
+			final OutputStream os = mSendSocket.getOutputStream();
 			FileTransferService.copyFile(is, os);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
+	
+	public void disconnect(){
+		if (serverSendThread != null){
+			serverSendThread.stop();
+			serverReceiveThread.stop();
+			
+			serverSendThread = null;
+			serverReceiveThread = null;
+		}
+	
+		mSendSocket = null;
+		mReceiveSocket = null;
+	}
 
 	@Override
 	public void onConnectionInfoAvailable(WifiP2pInfo info) {
 		// TODO Auto-generated method stub
-		if (info.groupOwnerAddress == null){
+		if (info.groupOwnerAddress == null || serverSendThread != null || serverReceiveThread != null || mSendSocket != null || mReceiveSocket != null){
 			return;
 		}
 		final String hostIP = info.groupOwnerAddress.getHostAddress();
@@ -53,13 +67,12 @@ public class P2PHandleNetwork implements ConnectionInfoListener, ServerSocketLis
 			if (info.isGroupOwner){
 				try {
 					if (serverSendThread == null && serverReceiveThread == null){
-						serverReceiveThread = new ServerReceiveSocket_Thread((ServerSocketListener)mContext);
+						serverReceiveThread = new ServerReceiveSocket_Thread(this);
 						serverReceiveThread.start();
 						
-						serverSendThread = new ServerSendSocket_Thread((ServerSocketListener)mContext);
+						serverSendThread = new ServerSendSocket_Thread(this);
 						serverSendThread.start();
-					}
-					
+					}	
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					Toast.makeText(mContext.getApplicationContext(), "Error of create", Toast.LENGTH_SHORT).show();
@@ -82,6 +95,7 @@ public class P2PHandleNetwork implements ConnectionInfoListener, ServerSocketLis
 								mSendSocket.connect(new InetSocketAddress(hostIP, ServerReceiveSocket_Thread.PORT), SOCKET_TIMEOUT);
 								ReceiveSocketAsync receiveThread = new ReceiveSocketAsync((SocketReceiverDataListener)mContext, mReceiveSocket, mContext);
 								receiveThread.start();
+								mListener.onConnectComplete();
 								
 							} catch (IOException e) {
 								// TODO Auto-generated catch block
@@ -102,6 +116,7 @@ public class P2PHandleNetwork implements ConnectionInfoListener, ServerSocketLis
 	public void onReceive_SendSocket(Socket sendSocket) {
 		// TODO Auto-generated method stub
 		mSendSocket = sendSocket;
+		
 	}
 
 	@Override
@@ -110,11 +125,10 @@ public class P2PHandleNetwork implements ConnectionInfoListener, ServerSocketLis
 		mReceiveSocket = receiveSocket;
 		ReceiveSocketAsync receiveThread = new ReceiveSocketAsync((SocketReceiverDataListener)mContext, receiveSocket, mContext);
 		receiveThread.start();
+		mListener.onConnectComplete();
 	}
-
-	@Override
-	public void onPeersAvailable(WifiP2pDeviceList peers) {
-		// TODO Auto-generated method stub
-		
+	
+	public interface P2PHandleNetworkListener{
+		public void onConnectComplete();
 	}
 }

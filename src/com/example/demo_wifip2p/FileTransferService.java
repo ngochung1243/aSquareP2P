@@ -12,30 +12,20 @@ import android.os.Bundle;
 public class FileTransferService {
 
 	public static boolean copyFile(final InputStream inputStream, final OutputStream out) {
-		Runnable runnable = new Runnable() {
-			
-			@Override
-			public void run() {
-				// TODO Auto-generated method stub
-				byte buf[] = new byte[1024];
-		        int len;
-		        
-		        try {
-		            while ((len = inputStream.read(buf)) != -1) {
-		                out.write(buf, 0, len);
-		            }
-		            
-		            inputStream.close();
-		            out.close();
-		            
-		        } catch (IOException e) {
-		            
-		        }
-			}
-		};
-        Thread t = new Thread(runnable);
-        t.start();
+		byte buf[] = new byte[1024];
+        int len;
         
+        try {
+            while ((len = inputStream.read(buf)) != -1) {
+                out.write(buf, 0, len);
+            }
+            
+            inputStream.close();
+            out.close();
+            
+        } catch (IOException e) {
+            
+        }   
         return true;
     }
 }
